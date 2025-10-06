@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Masomo Pledges - Receive Payments</title>
+  <title>Receive Payments</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -100,18 +100,18 @@
   </style>
 </head>
 <body>
-  <h2>Masomo Pledges - Receive Payments</h2>
+  <h2>Receive Payments for Pledges</h2>
 
   <p id="waitMsg">Wait please....</p>
 
-  <!-- LOGIN -->
-  <div id="loginDiv">
-    <input type="text" id="nationalId" placeholder="National ID"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <p id="loginInfo">Login to view your events, contributors, and track payments.</p>
-    <button class="btn-login" onclick="login()">Login</button>
-    <p id="loginMsg" style="color:red;"></p>
-  </div>
+ <!-- LOGIN -->
+<div id="loginDiv">
+  <p id="loginInfo">Login to view your events, contributors, and track payments.</p>
+  <input type="text" id="nationalId" placeholder="National ID"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button class="btn-login" onclick="login()">Login</button>
+  <p id="loginMsg" style="color:red;"></p>
+</div>
 
   <!-- DASHBOARD: Events -->
   <div id="dashboard" style="display:none;">
