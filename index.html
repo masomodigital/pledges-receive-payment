@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masomo Pledges - Receive Payments</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 { 
+      text-align: center; 
+      color: green; 
+    }
+    h3, h4 { text-align: center; }
+
+    #loginDiv, #dashboard, #contributorsDiv {
+      max-width: 1000px;
+      width: 100%;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+      margin-bottom: 20px;
+    }
+
+    #loginDiv { max-width: 300px; }
+
+    input {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      max-width: 150px;
+      box-sizing: border-box;
+    }
+
+    input.amountInput { max-width: 80px; }
+
+    button {
+      padding: 5px 10px;
+      margin: 2px 2px 2px 0;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover { opacity: 0.9; }
+
+    .btn-login { background: #28a745; }
+    .btn-view { background: #17a2b8; }
+    .btn-collect { background: #28a745; color: #fff; }
+
+    .table-wrapper { overflow-x: auto; margin-top: 10px; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 700px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background: #0077cc;
+      color: white;
+      position: sticky;
+      top: 0;
+    }
+
+    .credits-display { font-weight: bold; color: #0077cc; margin-left: 5px; }
+
+    #waitMsg {
+      font-weight: bold;
+      color: #0077cc;
+      text-align: center;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    /* Additional info below login */
+    #loginInfo {
+      color: #0077cc;
+      font-size: 0.9em;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Masomo Pledges - Receive Payments</h2>
+
+  <p id="waitMsg">Wait please....</p>
+
+  <!-- LOGIN -->
+  <div id="loginDiv">
+    <input type="text" id="nationalId" placeholder="National ID"><br>
+    <input type="password" id="password" placeholder="Password"><br>
+    <p id="loginInfo">Login to view your events, contributors, and track payments.</p>
+    <button class="btn-login" onclick="login()">Login</button>
+    <p id="loginMsg" style="color:red;"></p>
+  </div>
+
+  <!-- DASHBOARD: Events -->
+  <div id="dashboard">
+    <h3 id="welcomeMsg"></h3>
+    <h4>Your Events</h4>
+    <div class="table-wrapper">
+      <table id="eventsTable">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Venue</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Contributors -->
+  <div id="contributorsDiv">
+    <h4 id="eventTitleHeading"></h4>
+    <div class="table-wrapper">
+      <table id="contributorsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Pledged</th>
+            <th>Collected</th>
+            <th>Balance</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button style="background:#28a745; color:white; padding:8px 12px; border:none; border-radius:4px; cursor:pointer;" onclick="backToEvents()">Back to Events</button>
+  </div>
+
+  <script>
+    const WORKER_URL = "https://quiet-base-943f.ev-dmaundu.workers.dev/";
+
+    let userNationalId = "";
+    let currentEventId = "";
+    let userName = "";
+    let userSmsCredits = 0;
+
+    const waitMsg = document.getElementById("waitMsg");
+    function showWait() { waitMsg.style.display = "block"; }
+    function hideWait() { waitMsg.style.display = "none"; }
+
+    async function callWorker(payload) {
+      const res = await fetch(WORKER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    }
+
+    async function login() {
+      const nationalId = document.getElementById("nationalId").value.trim();
+      const password = document.getElementById("password").value.trim();
+      document.getElementById("loginMsg").textContent = "";
+      if (!nationalId || !password) {
+        document.getElementById("loginMsg").textContent = "Enter both National ID and Password";
+        return;
+      }
+
+      showWait();
+      try {
+        const res = await callWorker({ action: "loginUser", nationalId, password });
+        hideWait();
+        if(res.success){
+          userNationalId = res.nationalId;
+          userName = res.name;
+          userSmsCredits = res.smsCredits;
+          document.getElementById("loginDiv").style.display = "none";
+          document.getElementById("dashboard").style.display = "block";
+          updateWelcomeMsg();
+          loadEvents();
+        } else {
+          document.getElementById("loginMsg").textContent = res.message;
+        }
+      } catch(err){
+        hideWait();
+        alert("Error connecting to server.");
+        console.error(err);
+      }
+    }
+
+    function updateWelcomeMsg() {
+      document.getElementById("welcomeMsg").innerHTML = `
+        Welcome <span style="color:green; font-weight:bold;">${userName}</span> | 
+        SMS Credits: <span style="color:red; font-weight:bold;">${userSmsCredits}</span>
+      `;
+    }
+
+    async function loadEvents() {
+      showWait();
+      try {
+        const events = await callWorker({ action: "getOrganizerEvents", nationalId: userNationalId });
+        hideWait();
+        const tbody = document.querySelector("#eventsTable tbody");
+        tbody.innerHTML = "";
+        events.forEach(ev => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${ev.title}</td>
+            <td>${ev.date}</td>
+            <td>${ev.venue}</td>
+            <td>${ev.status}</td>
+            <td><button class="btn-view" onclick="viewContributors('${ev.eventId}','${ev.title}')">View Contributors</button></td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch(err){
+        hideWait();
+        alert("Error fetching events.");
+        console.error(err);
+      }
+    }
+
+    async function viewContributors(eventId, title){
+      currentEventId = eventId;
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("contributorsDiv").style.display = "block";
+      document.getElementById("eventTitleHeading").textContent = `Contributors for "${title}"`;
+
+      showWait();
+      try {
+        const contributors = await callWorker({ action: "getEventContributors", eventId });
+        hideWait();
+        const tbody = document.querySelector("#contributorsTable tbody");
+        tbody.innerHTML = "";
+        if(contributors.length === 0){
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td colspan="6" style="text-align:center;">No contributors yet</td>`;
+          tbody.appendChild(tr);
+        } else {
+          contributors.forEach(c => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${c.name}</td>
+              <td>${String(c.phone).startsWith('0') ? c.phone : '0' + c.phone}</td>
+              <td>${c.pledgedAmount}</td>
+              <td class="collected">${c.collectedAmount}</td>
+              <td class="balance">${c.balance}</td>
+              <td>
+                <input type="number" class="amountInput" placeholder="Received" id="received_${c.pledgeId}">
+                <button class="btn-collect" onclick="collectAmount('${c.pledgeId}', this)">Collect</button>
+              </td>
+            `;
+            tbody.appendChild(row);
+          });
+        }
+      } catch(err){
+        hideWait();
+        alert("Error fetching contributors.");
+        console.error(err);
+      }
+    }
+
+    async function collectAmount(pledgeId, btn){
+      const amountInput = document.getElementById(`received_${pledgeId}`);
+      const amount = Number(amountInput.value);
+      if(!amount || amount <= 0) return alert("Enter valid amount received");
+
+      showWait();
+      try {
+        const res = await callWorker({ action: "markPledgeCollected", pledgeId, amountReceived: amount, userNationalId });
+        hideWait();
+        if(res.success){
+          const tr = btn.closest("tr");
+          tr.querySelector(".collected").textContent = res.newCollected;
+          tr.querySelector(".balance").textContent = res.newBalance;
+          amountInput.value = "";
+          alert("Payment received and Thank You SMS sent!");
+          userSmsCredits = Math.max(0, userSmsCredits - 1);
+          updateWelcomeMsg();
+        } else {
+          alert(res.message);
+        }
+      } catch(err){
+        hideWait();
+        alert("Error processing collection.");
+        console.error(err);
+      }
+    }
+
+    function backToEvents(){
+      showWait();
+      document.getElementById("contributorsDiv").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      loadEvents();
+      hideWait();
+    }
+  </script>
+</body>
+</html>
