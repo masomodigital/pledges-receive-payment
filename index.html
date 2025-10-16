@@ -58,6 +58,7 @@
     .btn-login { background: #28a745; }
     .btn-view { background: #17a2b8; }
     .btn-collect { background: #28a745; color: #fff; }
+    .btn-logout { background: #dc3545; float: right; }
 
     .table-wrapper { overflow-x: auto; margin-top: 10px; }
 
@@ -136,6 +137,7 @@
   <!-- DASHBOARD: Events -->
   <div id="dashboard" style="display:none;">
     <h3 id="welcomeMsg"></h3>
+    <button class="btn-logout" onclick="logout()">Log Out</button>
     <h4>Your Events</h4>
     <div class="table-wrapper">
       <table id="eventsTable">
@@ -331,6 +333,18 @@
       document.getElementById("dashboard").style.display = "block";
       loadEvents();
       hideWait();
+    }
+
+    function logout(){
+      userNationalId = "";
+      userName = "";
+      userSmsCredits = 0;
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("contributorsDiv").style.display = "none";
+      document.getElementById("loginDiv").style.display = "block";
+      document.getElementById("welcomeMsg").textContent = "";
+      document.getElementById("nationalId").value = "";
+      document.getElementById("password").value = "";
     }
   </script>
 </body>
